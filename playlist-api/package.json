@@ -1,0 +1,21 @@
+{
+  "name": "playlist-api",
+  "version": "1.0.0",
+  "description": "Manage playlists",
+  "main": "index.js",
+  "dependencies": {
+    "assert": "^1.4.1",
+    "jsonschema": "^1.2.4",
+    "mongodb": "^3.0.10",
+    "restify": "^7.2.1",
+    "restify-cors-middleware": "^1.1.1",
+    "restify-errors": "^6.1.1",
+    "uuid": "^3.2.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Steve Owens",
+  "license": "ISC"
+}
