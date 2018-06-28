@@ -18,8 +18,10 @@ function createPlaylist(req, res, next) {
 			res.json(result);
 			next();
 		}).catch(function(error){
-			console.error(error);
-			if(error instanceof assert.AssertionError){
+			console.error("Db triggers error: " + error);
+			if(error instanceof errors.UnprocessableEntityError){
+				return next(error);
+			} else if(error instanceof assert.AssertionError){
 				return next(new errors.BadRequestError({
 					cause: error,
 				    info: { errorType: 'BAD_REQUEST' }
@@ -79,21 +81,16 @@ function deletePlaylist(req, res, next) {
 
 function showAvailablePlaylists(req, res, next){
 	requestingUser = req.header('Authorization');
-	var result = db.findPlaylists(requestingUser)
-	.then(function(result){
-		res.json(result);
-		next();
-	}).catch(function(error){
-		console.error(error);
-		if(error instanceof assert.AssertionError){
-			return next(new errors.BadRequestError({
-				cause: error,
-			    info: { errorType: 'BAD_REQUEST' }
-			}, "Assertion failure."));
-		} else {
-			return next(error);
-		}
-	});	
+	var result = db.findPlaylists(requestingUser);
+	res.json(result);
+	next();	
+}
+
+function getPlaylistById(req, res, next){
+	requestingUser = req.header('Authorization');
+	var result = db.findPlaylistById(requestingUser, req.params.id)
+	res.json(result);
+	next();	
 }
 
 module.exports = {
@@ -101,6 +98,7 @@ module.exports = {
 		server.post('/playlist', createPlaylist);
 		server.put('/playlist/:id', updatePlaylist);
 		server.del('/playlist/:id', deletePlaylist);
-		server.del('/playlist', showAvailablePlaylists);
+		server.get('/playlist', showAvailablePlaylists);
+		server.get('/playlist/:id', getPlaylistById);
 	}
 };

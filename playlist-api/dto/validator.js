@@ -62,7 +62,15 @@ function validateObject(id, object){
 			if(result.valid){
 				resolve(result);
 			} else {
-				reject(new errors.UnprocessableEntityError(JSON.stringify(result.errors)));
+				console.error(result.errors);
+				var errorDetails = "";
+				console.log("Result.errors: " + JSON.stringify(result.errors));
+				for(var ix = 0; ix < result.errors.length; ix++){
+					var error = result.errors[ix];
+					var index = ix+1;
+					errorDetails = errorDetails + index + ") " + error.message + "; ";
+				}
+				reject(new errors.UnprocessableEntityError("Schema validation failures: " + errorDetails));
 			}
 		} catch(error){
 			reject(error);

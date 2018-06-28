@@ -1,6 +1,7 @@
 const validators = require('../dto/validator.js');
 const errors = require('restify-errors');
 const assert = require('assert');
+const util = require('util');
 
 var db = {
 	"users" : {
@@ -262,14 +263,18 @@ function addPlaylist(playlist, requestingUser) {
 				console.log("Found ownerID in users");
 				verifySongIds(playlist.song_ids);
 				console.log("Found all songs from playlist in songs.");
-				playlist.id = collection.nextId;
+				playlist.id = "" + collection.nextId;
 				playlist.owner_id = requestingUser;
 				collection.nextId++;
 				collection.dataSet.push(playlist);
 				resolve(playlist);
 			})
 			.catch(function(error){
-				reject(new errors.BadRequestError(error));
+				if(error instanceof errors.UnprocessableEntityError){
+					reject(error);
+				} else {
+					reject(new errors.BadRequestError(error));
+				}
 			});
 	});
 	return myPromise;
@@ -308,16 +313,44 @@ function updatePlaylist(id, playlist, requestingUser) {
 }
 
 function deletePlaylist(id, requestingUser) {
+	console.log("Attempt to delete playlist '" + id + "' by requesting user '" + requestingUser + "'");
 	var myPromise = new Promise(function(resolve, reject){
 		var collection = db.playlists;
 		var existing = findItemByProperty(db.playlists, "id", id);
-		try {
-			assert(existing, "No playlist with id: " + id);
-			assert(existing.owner_id === requestingUser);
-			resolve(removeItem(collection, id));
-		} catch(error){
-			reject(new errors.BadRequestError(error));
+		if(!existing){
+			console.log("Current playlists: " + JSON.stringify(db.playlists));
+			reject(new errors.NotFoundError("No playlist with id: " + id));
+			return;
 		}
+		if(existing.owner_id != requestingUser){
+			reject(new errors.ForbiddenError("Permission to delete playlist denied."));
+			return;
+		};
+		resolve(removeItem(collection, id));
+	});
+	return myPromise;
+}
+
+function deletePlaylist(id, requestingUser) {
+	console.log("Attempt to delete playlist '" + id + "' by requesting user '" + requestingUser + "'");
+	var myPromise = new Promise(function(resolve, reject){
+		var collection = db.playlists;
+		var existing = findItemByProperty(db.playlists, "id", id);
+		if(!existing){
+			console.log("Current playlists: " + JSON.stringify(db.playlists));
+			reject(new errors.NotFoundError("No playlist with id: " + id));
+			return;
+		}
+		console.log("owner_id.type = " + typeof(existing.owner_id));
+		console.log("requestingUser.type = " + typeof(requestingUser));
+		if(!(existing.owner_id == requestingUser)){
+			console.warn(
+				util.format("Permission to delete playlist %s with owner %s denied to user %s",
+				id, existing.owner_id, requestingUser));
+			reject(new errors.ForbiddenError("Permission to delete playlist denied."));
+			return;
+		};
+		resolve(removeItem(collection, id));
 	});
 	return myPromise;
 }
@@ -329,11 +362,20 @@ function findPlaylists(requestingUser){
 	return result;
 }
 
+function findPlaylistById(requestingUser, playlistId){
+	var playlist = findItemByProperty(db.playlists, "id", playlistId, result);
+	if(playlist.share_status == "public" || playlist.owner_id == playlistId){
+		return playlist;
+	}
+	return null;
+}
+
 
 module.exports = {
 	db: db,
 	addPlaylist: addPlaylist,
 	updatePlaylist: updatePlaylist, 
 	deletePlaylist: deletePlaylist,
-	findItemByProperty: findItemByProperty
+	findItemByProperty: findItemByProperty,
+	findPlaylistById: findPlaylistById
 }
